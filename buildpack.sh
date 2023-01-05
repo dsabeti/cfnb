@@ -123,15 +123,15 @@ mkdir -p /home/vcap/layers/config
 touch /home/vcap/layers/config/metadata.toml
 
 for idx in \$(ls /home/vcap/deps); do
-	if [[ -e "/home/vcap/deps/\${idx}/config.yml" ]]; then
-		if grep --silent magic_string "/home/vcap/deps/\${idx}/config.yml"; then
-			for layer in \$(ls /home/vcap/deps/\${idx}/layers); do
-				if [[ "\${layer}" == "config" ]]; then
-					mv /home/vcap/layers/config/metadata.toml /home/vcap/layers/config/metadata.toml.old
-					cat "/home/vcap/deps/\${idx}/layers/\${layer}/metadata.toml" /home/vcap/layers/config/metadata.toml.old > /home/vcap/layers/config/metadata.toml
-					rm /home/vcap/layers/config/metadata.toml.old
-				else
-					ln -s "/home/vcap/deps/\${idx}/layers/\${layer}" "/home/vcap/layers/\${layer}"
+  if [[ -e "/home/vcap/deps/\${idx}/config.yml" ]]; then
+    if grep --silent magic_string "/home/vcap/deps/\${idx}/config.yml"; then
+      for layer in \$(ls /home/vcap/deps/\${idx}/layers); do
+        if [[ "\${layer}" == "config" ]]; then
+          mv /home/vcap/layers/config/metadata.toml /home/vcap/layers/config/metadata.toml.old
+          cat "/home/vcap/deps/\${idx}/layers/\${layer}/metadata.toml" /home/vcap/layers/config/metadata.toml.old > /home/vcap/layers/config/metadata.toml
+          rm /home/vcap/layers/config/metadata.toml.old
+        else
+          ln -s "/home/vcap/deps/\${idx}/layers/\${layer}" "/home/vcap/layers/\${layer}"
           for dir in \$(find "/home/vcap/layers/\${layer}/" -mindepth 1 -maxdepth 1 -type d); do
             if [[ -e "\${dir}/bin" ]]; then
               export "PATH=\${dir}/bin\$([[ -n "\${PATH:-}" ]] && printf "%s" ":\${PATH}")"
@@ -150,10 +150,10 @@ for idx in \$(ls /home/vcap/deps); do
               export "PKG_CONFIG_PATH=\${dir}/pkgconfig\$([[ -n "\${PKG_CONFIG_PATH:-}" ]] && printf "%s" ":\${PKG_CONFIG_PATH}")"
             fi
           done
-				fi
-			done
-		fi
-	fi
+        fi
+      done
+    fi
+  fi
 done
 EOF
 
