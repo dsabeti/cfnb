@@ -3,7 +3,9 @@
 set -e
 set -u
 set -o pipefail
+set -x
 
+LOG_LEVEL=debug
 BUILDPACK_DIR="$(cd "$(dirname "${0}")/.." && pwd)"
 readonly BUILDPACK_DIR
 
@@ -43,11 +45,10 @@ function phase::detect() {
       -app "${working_dir}" \
       -buildpacks "${BUILDPACK_DIR}/cnb/buildpacks" \
       -group /tmp/group.toml \
-      -log-level info \
+      -log-level ${LOG_LEVEL} \
       -order "${BUILDPACK_DIR}/buildpack.toml" \
       -plan /tmp/plan.toml \
-      -platform "${platform_dir}" \
-        > /dev/null
+      -platform "${platform_dir}"
 }
 
 function phase::supply() {
@@ -63,7 +64,7 @@ function phase::supply() {
   # If the /tmp/group.toml file is not present, the buildpack skipped
   # detection and we will need to manually invoke it here.
   if [[ ! -e /tmp/group.toml ]]; then
-    phase::detect "${@:-}" > /dev/null
+    phase::detect "${@:-}" 
   fi
 
   local name version
@@ -106,7 +107,7 @@ EOF
        -buildpacks "${BUILDPACK_DIR}/cnb/buildpacks" \
        -group /tmp/group.toml \
        -layers "${deps_dir}/${index}/layers" \
-       -log-level info \
+       -log-level ${LOG_LEVEL} \
        -plan /tmp/plan.toml \
        -platform "${platform_dir}"
 
@@ -117,6 +118,7 @@ EOF
   mkdir -p "${profile_dir}"
 
   cat << EOF > "${profile_dir}/launch.sh"
+set -x
 mkdir -p /home/vcap/layers/config
 touch /home/vcap/layers/config/metadata.toml
 
