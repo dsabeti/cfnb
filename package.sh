@@ -93,8 +93,8 @@ function main() {
       util::tar xzf ./buildpack.cnb "blobs/sha256/${layer}"
       util::tar xf "blobs/sha256/${layer}"
 
-      if [[ "${main_id}" == "$(util::tar xOf "blobs/sha256/${layer}" ./*buildpack.toml | yj -tj | jq -r .buildpack.id)" ]]; then
-        util::tar xOf "blobs/sha256/${layer}" ./*buildpack.toml > buildpack.toml
+      if [[ "${main_id}" == "$(util::tar --wildcards -xOf "blobs/sha256/${layer}" */buildpack.toml | yj -tj | jq -r .buildpack.id)" ]]; then
+        util::tar --wildcards -xOf "blobs/sha256/${layer}" */buildpack.toml > buildpack.toml
       fi
     done
     rm -rf "blobs"
