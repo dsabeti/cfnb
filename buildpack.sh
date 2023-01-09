@@ -9,28 +9,43 @@ LOG_LEVEL=debug
 BUILDPACK_DIR="$(cd "$(dirname "${0}")/.." && pwd)"
 readonly BUILDPACK_DIR
 
+APP_DIR="/home/vcap/app"
+
 function main() {
   local phase
   phase="$(basename "${0}")"
   echo "phase: ${phase} | args: ${*:-}" 1>&2
 
+  local tmp_dir
+  tmp_dir="${1}"
+  shift 1
+
+  declare -a args
+  args=("${APP_DIR}" "${@}")
+
+  mv "${APP_DIR}" "${APP_DIR}.bak"
+  mv "${tmp_dir}" "${APP_DIR}"
+
   case "${phase}" in
     "detect")
-      phase::detect "${@:-}"
+      phase::detect "${args[@]}"
       ;;
 
     "supply")
-      phase::supply "${@:-}"
+      phase::supply "${args[@]}"
       ;;
 
     "finalize")
-      phase::finalize "${@:-}"
+      phase::finalize "${args[@]}"
       ;;
 
     "release")
-      phase::release "${@:-}"
+      phase::release "${args[@]}"
       ;;
   esac
+
+  mv "${APP_DIR}" "${tmp_dir}"
+  mv "${APP_DIR}.bak" "${APP_DIR}"
 }
 
 function phase::detect() {
