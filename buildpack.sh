@@ -113,7 +113,7 @@ function phase::supply() {
 ---
 name: ${name}
 version: ${version}
-magic_string: true # this is a "magic string" used by the profile.d script at launch to help stitch together all of the v3 buildpacks
+config: {entrypoint_prefix: /home/vcap/deps/${index}/launcher}
 EOF
 
   CNB_STACK_ID=io.buildpacks.stacks.bionic \
@@ -132,14 +132,20 @@ EOF
   profile_dir="${deps_dir}/${index}/profile.d"
   mkdir -p "${profile_dir}"
 
+  cat << EOF > "${profile_dir}/00_cnb_launcher_env.sh"
+export CNB_LAYERS_DIR=/home/vcap/layers
+export CNB_APP_DIR=/home/vcap/app
+EOF
+
   cat << EOF > "${profile_dir}/launch.sh"
+#!/usr/bin/env bash
 set -x
 mkdir -p /home/vcap/layers/config
 touch /home/vcap/layers/config/metadata.toml
 
 for idx in \$(ls /home/vcap/deps); do
   if [[ -e "/home/vcap/deps/\${idx}/config.yml" ]]; then
-    if grep --silent magic_string "/home/vcap/deps/\${idx}/config.yml"; then
+    if grep --silent entrypoint_prefix "/home/vcap/deps/\${idx}/config.yml"; then
       for layer in \$(ls /home/vcap/deps/\${idx}/layers); do
         if [[ "\${layer}" == "config" ]]; then
           mv /home/vcap/layers/config/metadata.toml /home/vcap/layers/config/metadata.toml.old
@@ -203,16 +209,18 @@ function phase::finalize() {
   # Copy the launch into the deps directory to that it ends up in the droplet.
   cp -a "${BUILDPACK_DIR}/cnb/lifecycle/launcher" "${deps_dir}/${index}/launcher"
 
-  local cmd
-  #cmd="CNB_LAYERS_DIR=/home/vcap/deps/${index}/layers CNB_APP_DIR=/home/vcap/app /home/vcap/deps/${index}/launcher"
-  cmd="CNB_LAYERS_DIR=/home/vcap/layers CNB_APP_DIR=/home/vcap/app /home/vcap/deps/${index}/launcher"
+  local metadata_toml="${deps_dir}/${index}/layers/config/metadata.toml"
+  local cmd="echo not-found"
+  if [[ -e "${metadata_toml}" ]]; then
+    cmd="$(grep processes "${metadata_toml}" -A2 | grep "type.*web" -A1 | grep command | grep -oP "\"(.*)\"" | sed 's/"//g')"
+  fi
 
   # Create a launch.yml with references to the layers directory.
   cat << EOF > "${deps_dir}/${index}/launch.yml"
 ---
 processes:
 - type: web
-  command: ${cmd}
+  command: SOURCE=launch.yml ${cmd}
 EOF
 
   # Write release.yml to the temporary directory so that the release phase can
@@ -220,7 +228,7 @@ EOF
   cat << EOF > /tmp/release.yml
 ---
 default_process_types:
-  web: ${cmd}
+  web: SOURCE=release.yml ${cmd}
 EOF
 
   # If there is a Procfile, we need to remove it so that the procfile buildpack
